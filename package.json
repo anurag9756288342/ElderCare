@@ -1,0 +1,17 @@
+{
+  "name": "eldercare",
+  "version": "1.0.0",
+  "description": "Smart, interconnected healthcare management platform for elderly individuals, family members, and caretakers with passcode-based access and proactive email reminders.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "nodemailer": "^6.10.0"
+  }
+}

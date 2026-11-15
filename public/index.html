@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ElderCare — Smart Interconnected Healthcare Management Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <a href="#main-workspace" class="skip-link">Skip to main healthcare content</a>
+  <!-- ====================================================================
+       SECURE PASSCODE ACCESS GATE (Shared Ecosystem Entry)
+       ==================================================================== -->
+  <div id="auth-gate" class="auth-gate">
+    <div class="auth-container">
+      <!-- Left Panel: Ecosystem Overview & Profile Selector -->
+      <div class="auth-hero-panel">
+        <div class="brand-lockup">
+          <div class="brand-icon-box" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+              <path d="M12 8v6"/>
+              <path d="M9 11h6"/>
+            </svg>
+          </div>
+          <div>
+            <span class="brand-badge">Shared Care Ecosystem</span>
+            <h1 class="brand-title">ElderCare</h1>
+          </div>
+        </div>
+
+        <p class="auth-hero-lead">
+          Connected daily medication management, doctor appointments, health routines, and proactive email reminders for seniors, family members, and caretakers.
+        </p>
+
+        <div class="profile-selector-section">
+          <div class="section-header-row">
+            <h2 class="section-label">Available Care Profiles</h2>
+            <button type="button" id="btn-open-create-profile" class="btn-link-accent">
+              + Create New Care Profile
+            </button>
+          </div>
+          <div id="public-profiles-list" class="public-profiles-list">
+            <!-- Populated dynamically by app.js -->
+          </div>
+        </div>
+
+        <div class="auth-feature-pills">
+          <div class="feature-pill">
+            <span class="pill-dot teal"></span>
+            Passcode-Protected Care Circle
+          </div>
+          <div class="feature-pill">
+            <span class="pill-dot amber"></span>
+            Real-Time Adherence & Dose Tracking
+          </div>
+          <div class="feature-pill">
+            <span class="pill-dot blue"></span>
+            Automated Email Reminders
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Passcode Keypad & Role Selection -->
+      <div class="auth-form-panel">
+        <div class="auth-card-header">
+          <span class="lock-tag">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Passcode-Based Profile Access
+          </span>
+          <h2>Unlock Healthcare Profile</h2>
+          <p>Enter the Care Profile Code and shared Passcode to access medications, schedules, and appointments.</p>
+        </div>
+
+        <form id="auth-unlock-form" class="auth-form" autocomplete="off">
+          <div class="form-group">
+            <label for="auth-profile-code">Care Profile Code</label>
+            <input
+              type="text"
+              id="auth-profile-code"
+              class="input-control mono-input"
+              placeholder="e.g. MARTHA-842"
+              value="MARTHA-842"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="auth-member-select">Accessing As (Care Circle Member / Role)</label>
+            <select id="auth-member-select" class="input-control">
+              <option value="Martha Vance (Elderly Individual)">Martha Vance — Elderly Individual (Patient)</option>
+              <option value="Sarah Vance (Family Member)">Sarah Vance — Family Member (Daughter)</option>
+              <option value="Nurse David Miller, RN (Caretaker)">Nurse David Miller, RN — Caretaker</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label for="auth-passcode-input">Care Circle Passcode (PIN)</label>
+              <span id="auth-pin-hint" class="pin-hint-badge">Demo PIN: 4826</span>
+            </div>
+            <div class="passcode-input-wrapper">
+              <input
+                type="password"
+                id="auth-passcode-input"
+                class="input-control passcode-field"
+                placeholder="••••"
+                maxlength="12"
+                inputmode="numeric"
+                required
+              />
+              <button type="button" id="btn-toggle-pin-visibility" class="btn-icon-subtle" title="Show/Hide Passcode">
+                Show
+              </button>
+            </div>
+          </div>
+
+          <!-- Tactile PIN Pad for Elderly & Touch Convenience -->
+          <div class="pin-keypad" aria-label="Passcode Keypad">
+            <button type="button" class="pin-key" data-digit="1">1</button>
+            <button type="button" class="pin-key" data-digit="2">2</button>
+            <button type="button" class="pin-key" data-digit="3">3</button>
+            <button type="button" class="pin-key" data-digit="4">4</button>
+            <button type="button" class="pin-key" data-digit="5">5</button>
+            <button type="button" class="pin-key" data-digit="6">6</button>
+            <button type="button" class="pin-key" data-digit="7">7</button>
+            <button type="button" class="pin-key" data-digit="8">8</button>
+            <button type="button" class="pin-key" data-digit="9">9</button>
+            <button type="button" class="pin-key pin-key-action" data-action="clear">Clear</button>
+            <button type="button" class="pin-key" data-digit="0">0</button>
+            <button type="button" class="pin-key pin-key-action" data-action="fill-demo">Auto-PIN</button>
+          </div>
+
+          <div id="auth-error-msg" class="auth-error-msg hidden" role="alert"></div>
+
+          <div class="auth-submit-stack">
+            <button type="submit" id="btn-unlock-submit" class="btn btn-primary btn-lg btn-block">
+              Unlock Shared Care Profile
+            </button>
+            <button type="button" id="btn-quick-demo-unlock" class="btn btn-secondary btn-block">
+              Quick Demo Access (Martha Vance · PIN 4826)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================================
+       MAIN INTERCONNECTED HEALTHCARE APPLICATION SHELL
+       ==================================================================== -->
+  <div id="app-shell" class="app-shell hidden">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="header-inner">
+        <div class="header-brand-group">
+          <div class="brand-logo-sm" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+              <path d="M12 8v6"/><path d="M9 11h6"/>
+            </svg>
+          </div>
+          <div>
+            <div class="header-title-row">
+              <span class="app-name">ElderCare</span>
+              <span id="header-profile-code" class="profile-code-chip">MARTHA-842</span>
+            </div>
+            <div id="header-elder-subtitle" class="header-subtitle">Martha Vance · 78 yrs</div>
+          </div>
+        </div>
+
+        <div class="header-controls-group">
+          <!-- Active Member / Role Switcher -->
+          <div class="role-switcher-box">
+            <label for="active-actor-select" class="sr-only">Active Care Circle Member</label>
+            <span class="role-switcher-label">Acting As:</span>
+            <select id="active-actor-select" class="role-select-control" title="Switch active Care Circle member"></select>
+          </div>
+
+          <!-- Senior High-Clarity / Large Text Toggle -->
+          <button
+            type="button"
+            id="btn-senior-mode"
+            class="btn btn-outline-sm"
+            title="Toggle Senior Comfort Large-Text Mode"
+            aria-pressed="false"
+          >
+            <span class="a-plus-icon">A+</span>
+            <span class="hide-mobile">Senior View</span>
+          </button>
+
+          <!-- Web Speech API Voice Read-Aloud for Visually Impaired Seniors -->
+          <button
+            type="button"
+            id="btn-read-aloud"
+            class="btn btn-outline-sm"
+            title="Read Today's Medication Schedule Aloud (Accessibility Voice Guide)"
+          >
+            <span aria-hidden="true">🔊</span>
+            <span class="hide-mobile">Read Aloud</span>
+          </button>
+
+          <!-- Proactive Reminder Quick Status Button -->
+          <button
+            type="button"
+            id="btn-header-reminders"
+            class="btn btn-reminder-pill"
+            title="View Email Reminders & Outbox"
+          >
+            <span class="pulse-dot"></span>
+            <span id="header-email-count">2 Emails Sent</span>
+          </button>
+
+          <!-- Lock / Switch Profile -->
+          <button type="button" id="btn-lock-profile" class="btn btn-ghost-sm" title="Lock or Switch Care Profile">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Lock</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Primary Navigation Tabs -->
+      <nav class="main-nav" aria-label="Healthcare Management Sections">
+        <div class="nav-inner" role="tablist">
+          <button type="button" class="nav-tab active" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="overview">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+            <span>Overview &amp; Today</span>
+          </button>
+          <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="tab-medications" data-tab="medications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
+            <span>Medications &amp; Adherence</span>
+            <span id="nav-badge-meds" class="nav-badge hidden">0</span>
+          </button>
+          <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="tab-appointments" data-tab="appointments">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Medical Appointments</span>
+            <span id="nav-badge-apts" class="nav-badge badge-blue">0</span>
+          </button>
+          <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="tab-routines" data-tab="routines">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span>Daily Routines &amp; Vitals</span>
+          </button>
+          <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="tab-carecircle" data-tab="carecircle">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span>Care Circle &amp; Email Reminders</span>
+            <span id="nav-badge-emails" class="nav-badge badge-teal">0</span>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Main Content Container -->
+    <main id="main-workspace" class="main-content">
+      <!-- ================================================================
+           TAB 1: OVERVIEW & TODAY'S CARE
+           ================================================================ -->
+      <section id="tab-overview" class="tab-panel active">
+        <!-- Patient Medical Profile Banner -->
+        <div class="patient-banner-card">
+          <div class="patient-banner-main">
+            <div id="patient-avatar" class="patient-avatar-lg">MV</div>
+            <div class="patient-bio">
+              <div class="patient-name-row">
+                <h1 id="overview-elder-name">Martha Vance</h1>
+                <span id="overview-blood-badge" class="clinical-pill pill-blood">Blood Type: O+</span>
+                <span id="overview-age-badge" class="clinical-pill">Age 78</span>
+              </div>
+              <div class="patient-meta-grid">
+                <div>
+                  <span class="meta-label">Primary Physician:</span>
+                  <strong id="overview-primary-doc">Dr. Eleanor Chen, MD</strong>
+                </div>
+                <div>
+                  <span class="meta-label">Emergency Contact:</span>
+                  <strong id="overview-emergency">Sarah Vance · (555) 234-8910</strong>
+                </div>
+              </div>
+              <div class="patient-tags-row">
+                <div class="tags-group">
+                  <span class="tag-group-label">Allergies:</span>
+                  <div id="overview-allergies-list" class="inline-pills"></div>
+                </div>
+                <div class="tags-group">
+                  <span class="tag-group-label">Conditions:</span>
+                  <div id="overview-conditions-list" class="inline-pills"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="patient-banner-actions">
+            <button type="button" id="btn-edit-profile" class="btn btn-secondary btn-sm">
+              Edit Health Profile
+            </button>
+            <button type="button" id="btn-quick-scan-reminders" class="btn btn-primary btn-sm">
+              Scan &amp; Send Due Reminders
+            </button>
+          </div>
+        </div>
+
+        <!-- Proactive Missed / Overdue Medication Alert Banner -->
+        <div id="overdue-alert-banner" class="overdue-alert-banner hidden" role="region" aria-label="Overdue Medication Alert">
+          <!-- Populated dynamically when any scheduled dose is overdue or missed -->
+        </div>
+
+        <!-- 4-Card KPI Summary Strip -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Today's Dose Adherence</span>
+              <span id="kpi-today-badge" class="status-pill status-teal">On Track</span>
+            </div>
+            <div class="kpi-value-row">
+              <span id="kpi-today-rate" class="kpi-value">0%</span>
+              <span id="kpi-today-fraction" class="kpi-sub">0 of 0 doses taken</span>
+            </div>
+            <div class="progress-bar-track">
+              <div id="kpi-today-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">7-Day Adherence Score</span>
+              <span class="status-pill status-emerald">Weekly Trend</span>
+            </div>
+            <div class="kpi-value-row">
+              <span id="kpi-weekly-rate" class="kpi-value">95%</span>
+              <span id="kpi-weekly-sub" class="kpi-sub">Across 7 days</span>
+            </div>
+            <div id="kpi-mini-bars" class="mini-adherence-bars"></div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Next Doctor Appointment</span>
+              <button type="button" class="btn-text-xs" data-goto-tab="appointments">View All →</button>
+            </div>
+            <div id="kpi-next-apt-title" class="kpi-apt-title">Dr. Robert Patel</div>
+            <div id="kpi-next-apt-meta" class="kpi-sub">Tomorrow at 10:30 AM · Cardiology</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Proactive Email Reminders</span>
+              <button type="button" class="btn-text-xs" data-goto-tab="carecircle">Outbox →</button>
+            </div>
+            <div class="kpi-value-row">
+              <span id="kpi-email-total" class="kpi-value">2</span>
+              <span class="kpi-sub">Automated &amp; Care Alerts</span>
+            </div>
+            <div id="kpi-carecircle-avatars" class="avatar-stack-row"></div>
+          </div>
+        </div>
+
+        <!-- Main Overview 2-Column Split -->
+        <div class="overview-split-grid">
+          <!-- Left Column: Today's Medication Schedule Timeline -->
+          <div class="card-panel">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Today's Medication Schedule</h2>
+                <p id="overview-schedule-subtitle" class="card-subtitle">Tap "Mark Taken" as doses are completed or send an email reminder.</p>
+              </div>
+              <div class="card-header-actions">
+                <button type="button" id="btn-overview-add-med" class="btn btn-secondary btn-sm">
+                  + Add Medication
+                </button>
+              </div>
+            </div>
+            <div id="overview-dose-timeline" class="dose-timeline-list">
+              <!-- Populated by app.js -->
+            </div>
+          </div>
+
+          <!-- Right Column: Gemini Care Insights, Routines, Vitals, Activity Feed -->
+          <div class="overview-side-stack">
+            <!-- Smart Clinical & Google Gemini Care Assistant Card -->
+            <div class="card-panel gemini-insights-card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Smart Clinical Care Assistant</h2>
+                  <p id="overview-gemini-provider" class="card-subtitle">Google Gemini &amp; Clinical Adherence Insights</p>
+                </div>
+                <span class="status-pill status-blue">AI Care Brief</span>
+              </div>
+              <div id="overview-gemini-insights" class="compact-routines-list"></div>
+            </div>
+
+            <!-- Daily Healthcare Routines Quick Card -->
+            <div class="card-panel">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Daily Healthcare Routines</h2>
+                  <p class="card-subtitle">Essential daily wellness &amp; monitoring habits</p>
+                </div>
+                <button type="button" class="btn-text-xs" data-goto-tab="routines">Manage →</button>
+              </div>
+              <div id="overview-routines-list" class="compact-routines-list"></div>
+            </div>
+
+            <!-- Latest Vital Signs Card -->
+            <div class="card-panel">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Latest Vital Signs</h2>
+                  <p id="overview-vitals-timestamp" class="card-subtitle">Recorded today</p>
+                </div>
+                <button type="button" id="btn-overview-log-vitals" class="btn btn-secondary btn-xs">
+                  + Log Vitals
+                </button>
+              </div>
+              <div id="overview-vitals-summary" class="vitals-stat-grid"></div>
+            </div>
+
+            <!-- Care Circle Live Activity Feed -->
+            <div class="card-panel">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Shared Care Circle Activity</h2>
+                  <p class="card-subtitle">Real-time updates across family &amp; caretakers</p>
+                </div>
+              </div>
+              <div id="overview-activity-feed" class="activity-feed-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           TAB 2: MEDICATIONS & ADHERENCE TRACKING
+           ================================================================ -->
+      <section id="tab-medications" class="tab-panel">
+        <div class="section-top-bar">
+          <div>
+            <h1 class="page-heading">Medication Schedules &amp; Adherence Tracker</h1>
+            <p class="page-subheading">Add or edit prescribed medications, log daily doses, monitor pill inventory, and dispatch dose reminders.</p>
+          </div>
+          <div class="section-top-actions">
+            <div class="date-selector-group">
+              <label for="med-schedule-date">Schedule Date:</label>
+              <input type="date" id="med-schedule-date" class="input-control input-sm" />
+              <button type="button" id="btn-med-date-today" class="btn btn-ghost-sm">Today</button>
+            </div>
+            <button type="button" id="btn-open-add-med" class="btn btn-primary">
+              + Add New Medication
+            </button>
+          </div>
+        </div>
+
+        <!-- Low Refill Inventory Banner (if any) -->
+        <div id="low-refill-banner" class="refill-warning-banner hidden"></div>
+
+        <!-- 7-Day Adherence Analytics & Daily Tracker Split -->
+        <div class="meds-analytics-grid">
+          <div class="card-panel">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Daily Dose Log (<span id="med-selected-date-label">Today</span>)</h2>
+                <p class="card-subtitle">Record dose status or send an immediate email notification to the Care Circle.</p>
+              </div>
+            </div>
+            <div id="meds-daily-slots-container" class="dose-timeline-list"></div>
+          </div>
+
+          <div class="card-panel">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">7-Day Adherence History</h2>
+                <p class="card-subtitle">Consistent adherence helps prevent complications</p>
+              </div>
+              <span id="meds-weekly-badge" class="status-pill status-teal">95% Weekly</span>
+            </div>
+            <div id="weekly-chart-container" class="weekly-chart-box"></div>
+          </div>
+        </div>
+
+        <!-- Master Medication Regimen Directory -->
+        <div class="card-panel mt-24">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Prescribed Medication Regimen</h2>
+              <p class="card-subtitle">Authorized Care Circle members can add, edit, refill, or remove medications below.</p>
+            </div>
+          </div>
+          <div id="medications-directory-grid" class="medications-directory-grid"></div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           TAB 3: MEDICAL APPOINTMENTS
+           ================================================================ -->
+      <section id="tab-appointments" class="tab-panel">
+        <div class="section-top-bar">
+          <div>
+            <h1 class="page-heading">Doctor Appointments &amp; Clinical Visits</h1>
+            <p class="page-subheading">Coordinate upcoming specialist and primary care visits, preparation notes, family companions, and email reminders.</p>
+          </div>
+          <div class="section-top-actions">
+            <div class="filter-Segmented" role="group" aria-label="Appointment Filter">
+              <button type="button" class="seg-btn active" data-apt-filter="all">All Visits</button>
+              <button type="button" class="seg-btn" data-apt-filter="Upcoming">Upcoming</button>
+              <button type="button" class="seg-btn" data-apt-filter="Completed">Completed</button>
+            </div>
+            <button type="button" id="btn-open-add-apt" class="btn btn-primary">
+              + Schedule Appointment
+            </button>
+          </div>
+        </div>
+
+        <div id="appointments-list-grid" class="appointments-grid"></div>
+      </section>
+
+      <!-- ================================================================
+           TAB 4: DAILY HEALTHCARE ROUTINES & VITALS
+           ================================================================ -->
+      <section id="tab-routines" class="tab-panel">
+        <div class="section-top-bar">
+          <div>
+            <h1 class="page-heading">Daily Healthcare Routines &amp; Vital Signs</h1>
+            <p class="page-subheading">Track daily wellness habits, physical therapy exercises, hydration, and home vital sign readings.</p>
+          </div>
+          <div class="section-top-actions">
+            <button type="button" id="btn-open-add-routine" class="btn btn-secondary">
+              + Add Daily Routine
+            </button>
+            <button type="button" id="btn-open-add-vitals" class="btn btn-primary">
+              + Record Vital Signs
+            </button>
+          </div>
+        </div>
+
+        <div class="routines-vitals-grid">
+          <!-- Left: Daily Healthcare Routines Checklist -->
+          <div class="card-panel">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Daily Routine Checklist</h2>
+                <p class="card-subtitle">Check off completed routines for today</p>
+              </div>
+              <span id="routines-progress-pill" class="status-pill status-teal">0 / 0 Completed</span>
+            </div>
+            <div id="routines-full-list" class="routines-full-list"></div>
+          </div>
+
+          <!-- Right: Vital Signs Log & History -->
+          <div class="card-panel">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Vital Signs &amp; Wellness Log</h2>
+                <p class="card-subtitle">Blood Pressure, Heart Rate, Blood Glucose &amp; Weight</p>
+              </div>
+            </div>
+            <div id="vitals-history-list" class="vitals-history-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================
+           TAB 5: CARE CIRCLE, ACCESS SECURITY & EMAIL REMINDERS
+           ================================================================ -->
+      <section id="tab-carecircle" class="tab-panel">
+        <div class="section-top-bar">
+          <div>
+            <h1 class="page-heading">Care Circle &amp; Proactive Email Reminder Center</h1>
+            <p class="page-subheading">Manage authorized family members and caretakers, passcode security, and automated email reminders for missed doses, upcoming medications, and appointments.</p>
+          </div>
+          <div class="section-top-actions">
+            <button type="button" id="btn-open-add-member" class="btn btn-secondary">
+              + Add Care Circle Member
+            </button>
+            <button type="button" id="btn-trigger-proactive-scan" class="btn btn-primary">
+              Run Proactive Reminder Scan Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Top Grid: Passcode Access Card + Proactive Reminder Dispatch Console -->
+        <div class="carecircle-top-grid">
+          <!-- Shared Access & Passcode Security Card -->
+          <div class="card-panel">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Shared Passcode Access &amp; Security</h2>
+                <p class="card-subtitle">Share this Care Code and Passcode with trusted family &amp; caretakers</p>
+              </div>
+              <span class="status-pill status-teal">Passcode Protected</span>
+            </div>
+            <div class="security-credentials-box">
+              <div class="cred-item">
+                <span class="cred-label">Care Profile Code</span>
+                <div class="cred-value-row">
+                  <code id="sec-profile-code" class="cred-code">MARTHA-842</code>
+                </div>
+              </div>
+              <div class="cred-item">
+                <span class="cred-label">Active Passcode</span>
+                <div class="cred-value-row">
+                  <code id="sec-passcode-display" class="cred-code">••••</code>
+                  <button type="button" id="btn-reveal-sec-passcode" class="btn-text-xs">Reveal</button>
+                </div>
+              </div>
+            </div>
+
+            <form id="form-change-passcode" class="inline-passcode-form">
+              <label for="input-new-passcode">Update Shared Passcode:</label>
+              <div class="inline-input-row">
+                <input
+                  type="text"
+                  id="input-new-passcode"
+                  class="input-control input-sm mono-input"
+                  placeholder="New 4–8 digit PIN"
+                  minlength="4"
+                  maxlength="12"
+                  required
+                />
+                <button type="submit" class="btn btn-secondary btn-sm">Update PIN</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Proactive Email Reminder Engine & Instant Dispatch Card -->
+          <div class="card-panel">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Proactive Email Reminder Engine</h2>
+                <p class="card-subtitle">Automatically monitors schedule and emails Care Circle members</p>
+              </div>
+              <span id="mailer-mode-badge" class="status-pill status-emerald">Active</span>
+            </div>
+
+            <div class="reminder-rules-summary">
+              <div class="rule-chip">
+                <strong>Missed Dose Alert:</strong> After <span id="rule-grace-mins">30</span>m overdue
+              </div>
+              <div class="rule-chip">
+                <strong>Upcoming Dose:</strong> <span id="rule-upcoming-mins">60</span>m before dose
+              </div>
+              <div class="rule-chip">
+                <strong>Appointments:</strong> <span id="rule-apt-hours">48</span>h advance notice
+              </div>
+            </div>
+
+            <div class="instant-dispatch-box">
+              <span class="dispatch-label">Instant Email Reminder Actions (Dispatches to Care Circle):</span>
+              <div class="dispatch-buttons-grid">
+                <button type="button" class="btn btn-danger-soft btn-sm" data-quick-email="missed_medication">
+                  Send Missed Medication Alert
+                </button>
+                <button type="button" class="btn btn-warning-soft btn-sm" data-quick-email="upcoming_dose">
+                  Send Upcoming Dose Reminder
+                </button>
+                <button type="button" class="btn btn-info-soft btn-sm" data-quick-email="upcoming_appointment">
+                  Send Appointment Reminder
+                </button>
+                <button type="button" class="btn btn-teal-soft btn-sm" data-quick-email="daily_summary">
+                  Send Daily Care Digest
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Authorized Care Circle Members Grid -->
+        <div class="card-panel mt-24">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Authorized Care Circle Members &amp; Email Preferences</h2>
+              <p class="card-subtitle">Toggle which automated email reminders each person receives.</p>
+            </div>
+          </div>
+          <div id="care-circle-members-grid" class="care-circle-members-grid"></div>
+        </div>
+
+        <!-- Email Outbox & Automated Dispatch Log -->
+        <div class="card-panel mt-24">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Sent Email Reminders &amp; Notification Log</h2>
+              <p class="card-subtitle">Click "View Email" on any dispatched notification to inspect the formatted HTML email sent to the Care Circle.</p>
+            </div>
+            <div class="filter-Segmented" role="group" aria-label="Email Log Filter">
+              <button type="button" class="seg-btn active" data-email-filter="all">All</button>
+              <button type="button" class="seg-btn" data-email-filter="missed_medication">Missed Meds</button>
+              <button type="button" class="seg-btn" data-email-filter="upcoming_dose">Upcoming Doses</button>
+              <button type="button" class="seg-btn" data-email-filter="upcoming_appointment">Appointments</button>
+            </div>
+          </div>
+          <div id="email-outbox-list" class="email-outbox-list"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ====================================================================
+       MODALS FOR CRUD & EMAIL PREVIEW
+       ==================================================================== -->
+  <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true">
+    <!-- 1. Add / Edit Medication Modal -->
+    <div id="modal-medication" class="modal-dialog hidden" role="dialog" aria-labelledby="modal-med-title">
+      <div class="modal-header">
+        <h2 id="modal-med-title">Add Medication Schedule</h2>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-medication" class="modal-body">
+        <input type="hidden" id="med-form-id" />
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="med-form-name">Medication Name *</label>
+            <input type="text" id="med-form-name" class="input-control" placeholder="e.g. Lisinopril" required />
+          </div>
+          <div class="form-group">
+            <label for="med-form-dosage">Dosage *</label>
+            <input type="text" id="med-form-dosage" class="input-control" placeholder="e.g. 10 mg" required />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="med-form-type">Form</label>
+            <select id="med-form-type" class="input-control">
+              <option value="Tablet">Tablet</option>
+              <option value="Capsule">Capsule</option>
+              <option value="Softgel">Softgel</option>
+              <option value="Liquid / Syrup">Liquid / Syrup</option>
+              <option value="Injection / Insulin">Injection / Insulin</option>
+              <option value="Eye Drops">Eye Drops</option>
+              <option value="Inhaler">Inhaler</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="med-form-purpose">Condition / Purpose</label>
+            <input type="text" id="med-form-purpose" class="input-control" placeholder="e.g. Blood Pressure Control" />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="med-form-frequency">Frequency Label</label>
+            <select id="med-form-frequency" class="input-control">
+              <option value="Once Daily">Once Daily</option>
+              <option value="Twice Daily">Twice Daily</option>
+              <option value="Three Times Daily">Three Times Daily</option>
+              <option value="Every Evening">Every Evening</option>
+              <option value="As Scheduled">As Scheduled</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="med-form-times">Scheduled Times (24h comma-separated) *</label>
+            <input type="text" id="med-form-times" class="input-control mono-input" placeholder="08:00, 20:00" value="08:00" required />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="med-form-doctor">Prescribing Doctor</label>
+            <input type="text" id="med-form-doctor" class="input-control" placeholder="e.g. Dr. Eleanor Chen" />
+          </div>
+          <div class="form-group">
+            <label for="med-form-pills">Pills Remaining in Bottle</label>
+            <input type="number" id="med-form-pills" class="input-control" value="30" min="0" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="med-form-instructions">Special Instructions for Patient &amp; Caretaker</label>
+          <input type="text" id="med-form-instructions" class="input-control" placeholder="e.g. Take with breakfast and a full glass of water." />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Medication Schedule</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 2. Add / Edit Medical Appointment Modal -->
+    <div id="modal-appointment" class="modal-dialog hidden" role="dialog" aria-labelledby="modal-apt-title">
+      <div class="modal-header">
+        <h2 id="modal-apt-title">Schedule Medical Appointment</h2>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-appointment" class="modal-body">
+        <input type="hidden" id="apt-form-id" />
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="apt-form-doctor">Doctor / Clinician Name *</label>
+            <input type="text" id="apt-form-doctor" class="input-control" placeholder="e.g. Dr. Robert Patel, MD" required />
+          </div>
+          <div class="form-group">
+            <label for="apt-form-specialty">Medical Specialty *</label>
+            <input type="text" id="apt-form-specialty" class="input-control" placeholder="e.g. Cardiology" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="apt-form-title">Appointment Reason / Visit Title *</label>
+          <input type="text" id="apt-form-title" class="input-control" placeholder="e.g. Quarterly Blood Pressure &amp; Medication Check" required />
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="apt-form-date">Appointment Date *</label>
+            <input type="date" id="apt-form-date" class="input-control" required />
+          </div>
+          <div class="form-group">
+            <label for="apt-form-time">Appointment Time *</label>
+            <input type="time" id="apt-form-time" class="input-control" value="10:30" required />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="apt-form-clinic">Clinic / Hospital Location</label>
+            <input type="text" id="apt-form-clinic" class="input-control" placeholder="e.g. Oakridge Heart Institute, Suite 214" />
+          </div>
+          <div class="form-group">
+            <label for="apt-form-companion">Accompanied By (Care Circle)</label>
+            <input type="text" id="apt-form-companion" class="input-control" placeholder="e.g. Sarah Vance (Daughter)" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="apt-form-notes">Preparation Notes (Fasting, Lab Work, Documents to Bring)</label>
+          <textarea id="apt-form-notes" class="input-control" rows="2" placeholder="e.g. Bring home blood pressure log and current medication bottles."></textarea>
+        </div>
+        <div class="form-group checkbox-inline-group">
+          <input type="checkbox" id="apt-form-send-email" checked />
+          <label for="apt-form-send-email">Immediately send email confirmation &amp; reminder to Care Circle</label>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Appointment</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 3. Add Daily Routine Modal -->
+    <div id="modal-routine" class="modal-dialog hidden" role="dialog" aria-labelledby="modal-rtn-title">
+      <div class="modal-header">
+        <h2 id="modal-rtn-title">Add Daily Healthcare Routine</h2>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-routine" class="modal-body">
+        <div class="form-group">
+          <label for="rtn-form-title">Routine Title *</label>
+          <input type="text" id="rtn-form-title" class="input-control" placeholder="e.g. Afternoon Hydration &amp; Mobility Stretch" required />
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="rtn-form-category">Category</label>
+            <select id="rtn-form-category" class="input-control">
+              <option value="Vitals Monitoring">Vitals Monitoring</option>
+              <option value="Mobility & Exercise">Mobility &amp; Exercise</option>
+              <option value="Nutrition & Hydration">Nutrition &amp; Hydration</option>
+              <option value="Preventive Care">Preventive Care</option>
+              <option value="Mental Wellness">Mental Wellness</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="rtn-form-time">Target Time</label>
+            <input type="time" id="rtn-form-time" class="input-control" value="14:00" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="rtn-form-desc">Instructions / Goal</label>
+          <input type="text" id="rtn-form-desc" class="input-control" placeholder="e.g. 15 minutes gentle stretching and 1 full glass of water." />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Routine</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 4. Log Vital Signs Modal -->
+    <div id="modal-vitals" class="modal-dialog hidden" role="dialog" aria-labelledby="modal-vitals-title">
+      <div class="modal-header">
+        <h2 id="modal-vitals-title">Log Daily Vital Signs</h2>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-vitals" class="modal-body">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="vit-form-bp">Blood Pressure (mmHg) *</label>
+            <input type="text" id="vit-form-bp" class="input-control mono-input" placeholder="124/78" value="122/78" required />
+          </div>
+          <div class="form-group">
+            <label for="vit-form-hr">Heart Rate (bpm) *</label>
+            <input type="number" id="vit-form-hr" class="input-control mono-input" value="72" required />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="vit-form-glucose">Blood Glucose (mg/dL)</label>
+            <input type="number" id="vit-form-glucose" class="input-control mono-input" value="106" />
+          </div>
+          <div class="form-group">
+            <label for="vit-form-weight">Weight (lbs)</label>
+            <input type="number" step="0.1" id="vit-form-weight" class="input-control mono-input" value="146.5" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="vit-form-mood">Overall Comfort &amp; Mood</label>
+          <select id="vit-form-mood" class="input-control">
+            <option value="Rested & Cheerful">Rested &amp; Cheerful</option>
+            <option value="Calm & Steady">Calm &amp; Steady</option>
+            <option value="Mildly Fatigued">Mildly Fatigued</option>
+            <option value="Experiencing Discomfort">Experiencing Discomfort</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="vit-form-notes">Observation Notes</label>
+          <input type="text" id="vit-form-notes" class="input-control" placeholder="e.g. Taken after 5 minutes of seated rest." />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Vital Signs</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 5. Add Care Circle Member Modal -->
+    <div id="modal-member" class="modal-dialog hidden" role="dialog" aria-labelledby="modal-mem-title">
+      <div class="modal-header">
+        <h2 id="modal-mem-title">Add Authorized Care Circle Member</h2>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-member" class="modal-body">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="mem-form-name">Full Name *</label>
+            <input type="text" id="mem-form-name" class="input-control" placeholder="e.g. Dr. Rachel Green or Emily Vance" required />
+          </div>
+          <div class="form-group">
+            <label for="mem-form-role">Ecosystem Role *</label>
+            <select id="mem-form-role" class="input-control">
+              <option value="Family Member">Family Member</option>
+              <option value="Caretaker">Caretaker / Home Nurse</option>
+              <option value="Elderly Individual">Elderly Individual</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="mem-form-email">Email Address for Reminders *</label>
+            <input type="email" id="mem-form-email" class="input-control" placeholder="emily.vance@example.com" required />
+          </div>
+          <div class="form-group">
+            <label for="mem-form-phone">Phone Number</label>
+            <input type="text" id="mem-form-phone" class="input-control" placeholder="(555) 345-6789" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="mem-form-rel">Relationship Description</label>
+          <input type="text" id="mem-form-rel" class="input-control" placeholder="e.g. Niece / Evening Caregiver" />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Add to Care Circle</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 6. Edit Elderly Health Profile Modal -->
+    <div id="modal-edit-profile" class="modal-dialog hidden" role="dialog" aria-labelledby="modal-prof-title">
+      <div class="modal-header">
+        <h2 id="modal-prof-title">Edit Elderly Healthcare Profile</h2>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-edit-profile" class="modal-body">
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="prof-form-name">Patient Full Name *</label>
+            <input type="text" id="prof-form-name" class="input-control" required />
+          </div>
+          <div class="form-group">
+            <label for="prof-form-age">Age *</label>
+            <input type="number" id="prof-form-age" class="input-control" required />
+          </div>
+          <div class="form-group">
+            <label for="prof-form-blood">Blood Type</label>
+            <input type="text" id="prof-form-blood" class="input-control" placeholder="O+" />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="prof-form-allergies">Allergies (comma-separated)</label>
+            <input type="text" id="prof-form-allergies" class="input-control" placeholder="Penicillin, Sulfa Drugs" />
+          </div>
+          <div class="form-group">
+            <label for="prof-form-conditions">Medical Conditions (comma-separated)</label>
+            <input type="text" id="prof-form-conditions" class="input-control" placeholder="Hypertension, Type 2 Diabetes" />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="prof-form-doc">Primary Physician</label>
+            <input type="text" id="prof-form-doc" class="input-control" />
+          </div>
+          <div class="form-group">
+            <label for="prof-form-emergency">Emergency Contact Phone</label>
+            <input type="text" id="prof-form-emergency" class="input-control" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Health Profile</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 7. Create New Elderly Care Profile Modal -->
+    <div id="modal-create-profile" class="modal-dialog hidden" role="dialog" aria-labelledby="modal-newprof-title">
+      <div class="modal-header">
+        <h2 id="modal-newprof-title">Create New Elderly Care Profile</h2>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <form id="form-create-profile" class="modal-body">
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="newprof-name">Elderly Individual's Name *</label>
+            <input type="text" id="newprof-name" class="input-control" placeholder="e.g. Evelyn Harper" required />
+          </div>
+          <div class="form-group">
+            <label for="newprof-age">Age *</label>
+            <input type="number" id="newprof-age" class="input-control" value="79" required />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="newprof-code">Custom Profile Code (Optional)</label>
+            <input type="text" id="newprof-code" class="input-control mono-input" placeholder="e.g. EVELYN-500" />
+          </div>
+          <div class="form-group">
+            <label for="newprof-passcode">Set Shared Passcode (PIN) *</label>
+            <input type="text" id="newprof-passcode" class="input-control mono-input" placeholder="e.g. 2580" value="2580" required />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="newprof-elder-email">Elderly Person's Email</label>
+            <input type="email" id="newprof-elder-email" class="input-control" placeholder="evelyn.harper@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="newprof-doctor">Primary Physician</label>
+            <input type="text" id="newprof-doctor" class="input-control" placeholder="Dr. Samuel Kim, MD" />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="newprof-caretaker-name">Primary Family / Caretaker Name</label>
+            <input type="text" id="newprof-caretaker-name" class="input-control" placeholder="e.g. Daniel Harper (Son)" />
+          </div>
+          <div class="form-group">
+            <label for="newprof-caretaker-email">Caretaker Email for Alerts</label>
+            <input type="email" id="newprof-caretaker-email" class="input-control" placeholder="daniel.harper@example.com" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+          <button type="submit" class="btn btn-primary">Create &amp; Unlock Profile</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 8. HTML Email Reminder Preview Modal -->
+    <div id="modal-email-preview" class="modal-dialog modal-lg hidden" role="dialog" aria-labelledby="modal-email-title">
+      <div class="modal-header">
+        <div>
+          <span id="email-preview-badge" class="status-pill status-teal">Dispatched Email</span>
+          <h2 id="modal-email-title" class="mt-4">Email Reminder Preview</h2>
+        </div>
+        <button type="button" class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="email-meta-header">
+          <div><strong>To (Care Circle):</strong> <span id="email-preview-recipients"></span></div>
+          <div><strong>Sent At:</strong> <span id="email-preview-time"></span> · <strong>Status:</strong> <span id="email-preview-status"></span></div>
+        </div>
+        <div id="email-preview-frame" class="email-rendered-container"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-close-modal>Close Preview</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
