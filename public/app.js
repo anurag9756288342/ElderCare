@@ -460,9 +460,19 @@ function buildClientDashboardPayload(profile, selectedDate = getTodayDateString(
   if (lowRefillMedications.length > 0) {
     insights.push({ type: 'refill', title: 'Pharmacy Refill Coordination', text: `${lowRefillMedications.map((m) => `${m.name} (${m.pillsRemaining} left)`).join(', ')} should be refilled soon.` });
   }
+  const nextApt = enrichedAppointments.find((a) => a.status !== 'Completed' && a.date >= todayKey);
+  if (nextApt) {
+    insights.push({
+      type: 'appointment',
+      title: `Next Clinical Visit: ${nextApt.doctorName}`,
+      text: `${nextApt.specialty} on ${nextApt.date} at ${formatTime12h(nextApt.time)} (${nextApt.clinic}). Accompanied by ${nextApt.accompaniedBy || 'Care Circle'}.`
+    });
+  }
+
+  const { passcode, ...safeProfile } = profile;
 
   return {
-    profile,
+    profile: safeProfile,
     careCircle: profile.careCircle || [],
     medications: profile.medications || [],
     lowRefillMedications,
@@ -478,6 +488,8 @@ function buildClientDashboardPayload(profile, selectedDate = getTodayDateString(
     mailerStatus: { mode: 'local_outbox' }
   };
 }
+
+const clientAuthRateLimitMap = new Map();
 
 function dispatchClientEmail(profile, payload) {
   const recipients = (profile.careCircle || []).map((m) => ({ name: m.name, email: m.email, role: m.role }));
@@ -533,9 +545,21 @@ function executeLocalApiRequest(path, options = {}) {
   if (pathname === '/api/auth/verify' && method === 'POST') {
     const code = String(body.profileCode || '').toUpperCase().trim();
     const pin = String(body.passcode || '').trim();
+    const now = Date.now();
+    const rlEntry = clientAuthRateLimitMap.get(code);
+    if (rlEntry && now < rlEntry.resetAt && rlEntry.count >= 10) {
+      const waitSec = Math.ceil((rlEntry.resetAt - now) / 1000);
+      throw new Error(`Too many failed passcode attempts. Please wait ${waitSec}s before trying again.`);
+    }
     const prof = storeObj.profiles[code];
     if (!prof) throw new Error(`No Care Profile found with code "${code}".`);
-    if (String(prof.passcode).trim() !== pin) throw new Error('Incorrect passcode. Please verify the Care Circle PIN.');
+    if (String(prof.passcode).trim() !== pin) {
+      const curr = clientAuthRateLimitMap.get(code) || { count: 0, resetAt: now + 5 * 60 * 1000 };
+      curr.count += 1;
+      clientAuthRateLimitMap.set(code, curr);
+      throw new Error('Incorrect passcode. Please verify the Care Circle PIN.');
+    }
+    clientAuthRateLimitMap.delete(code);
     return { authenticated: true, profileCode: prof.profileCode, elderName: prof.elderName, careCircle: prof.careCircle, dashboard: buildClientDashboardPayload(prof, body.date) };
   }
 
