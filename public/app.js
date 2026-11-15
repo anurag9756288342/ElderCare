@@ -97,37 +97,779 @@ function showToast(message, isError = false) {
 }
 
 // ---------------------------------------------------------------------------
-// Fast Single-Round-Trip API Helper
+// Netlify & Static Hosting Client-Side Care Engine (Zero-Config Persistence)
 // ---------------------------------------------------------------------------
-async function apiRequest(path, options = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {})
-  };
-  if (state.activePasscode) {
-    headers['x-passcode'] = state.activePasscode;
-  }
+const LOCAL_STORE_KEY = 'eldercare_netlify_store_v1';
 
-  const res = await fetch(path, {
-    ...options,
-    headers
+function getDaysOffsetDateString(daysOffset) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function timeStrToMins(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function minsToTimeStr(totalMinutes) {
+  const clamped = Math.max(0, Math.min(23 * 60 + 59, Math.round(totalMinutes)));
+  const h = String(Math.floor(clamped / 60)).padStart(2, '0');
+  const m = String(clamped % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function genLocalId(prefix = 'id') {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function buildLocalEmailHtml({ profile, category, headline, subtitle, detailsRows = [], actionNote, urgency = 'normal' }) {
+  const accentColor =
+    urgency === 'high' ? '#DC2626' : urgency === 'warning' ? '#D97706' : urgency === 'appointment' ? '#2563EB' : '#0F766E';
+  const badgeBg =
+    urgency === 'high' ? '#FEF2F2' : urgency === 'warning' ? '#FFFBEB' : urgency === 'appointment' ? '#EFF6FF' : '#F0FDFA';
+  const rowsHtml = detailsRows
+    .map(
+      (r) => `
+      <tr>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; color: #64748B; font-size: 13px; font-weight: 600; width: 38%;">${escapeHtml(r.label)}</td>
+        <td style="padding: 10px 12px; border-bottom: 1px solid #E2E8F0; color: #0F172A; font-size: 14px; font-weight: 600;">${escapeHtml(r.value)}</td>
+      </tr>`
+    )
+    .join('');
+
+  return `<div style="max-width:580px; margin:0 auto; background:#FFFFFF; border-radius:16px; overflow:hidden; border:1px solid #E2E8F0; font-family:sans-serif;">
+    <div style="background:${accentColor}; padding:18px 22px; color:#FFFFFF;">
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:1.2px; opacity:0.9; font-weight:700;">ElderCare Proactive Care Network · Profile ${escapeHtml(profile.profileCode)}</div>
+      <h1 style="margin:6px 0 0; font-size:19px; font-weight:700;">${escapeHtml(headline)}</h1>
+    </div>
+    <div style="padding:20px 22px;">
+      <div style="display:inline-block; background:${badgeBg}; color:${accentColor}; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:700; margin-bottom:12px;">${escapeHtml(category)}</div>
+      <p style="margin:0 0 16px; color:#334155; font-size:14.5px; line-height:1.55;">${escapeHtml(subtitle)}</p>
+      <table style="width:100%; border-collapse:collapse; background:#F8FAFC; border-radius:10px; overflow:hidden; border:1px solid #E2E8F0; margin-bottom:16px;"><tbody>${rowsHtml}</tbody></table>
+      ${actionNote ? `<div style="background:${badgeBg}; border-left:4px solid ${accentColor}; padding:12px 14px; border-radius:6px; color:#1E293B; font-size:13.5px; margin-bottom:16px;"><strong>Recommended Action:</strong> ${escapeHtml(actionNote)}</div>` : ''}
+      <div style="padding-top:14px; border-top:1px solid #E2E8F0; font-size:12px; color:#64748B;">
+        <div><strong>Care Profile:</strong> ${escapeHtml(profile.elderName)} (Age ${escapeHtml(profile.age)}) · Code: <code>${escapeHtml(profile.profileCode)}</code></div>
+        <div><strong>Primary Physician:</strong> ${escapeHtml(profile.primaryDoctor || 'Not specified')} · <strong>Emergency Phone:</strong> ${escapeHtml(profile.emergencyPhone || 'Not specified')}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildInitialClientStore() {
+  const today = getTodayDateString();
+  const yesterday = getDaysOffsetDateString(-1);
+  const twoDaysAgo = getDaysOffsetDateString(-2);
+  const threeDaysAgo = getDaysOffsetDateString(-3);
+  const fourDaysAgo = getDaysOffsetDateString(-4);
+  const fiveDaysAgo = getDaysOffsetDateString(-5);
+  const sixDaysAgo = getDaysOffsetDateString(-6);
+  const tomorrow = getDaysOffsetDateString(1);
+  const inThreeDays = getDaysOffsetDateString(3);
+  const inEightDays = getDaysOffsetDateString(8);
+
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const overdueTime = currentMinutes > 120 ? minsToTimeStr(currentMinutes - 65) : '08:30';
+  const upcomingSoonTime = currentMinutes < 23 * 60 ? minsToTimeStr(currentMinutes + 35) : '23:30';
+
+  const marthaProfile = {
+    profileCode: 'MARTHA-842',
+    passcode: '4826',
+    elderName: 'Martha Vance',
+    age: 78,
+    dateOfBirth: '1948-04-12',
+    bloodType: 'O+',
+    allergies: ['Penicillin', 'Sulfa Drugs'],
+    conditions: ['Essential Hypertension', 'Type 2 Diabetes', 'Mild Osteoarthritis'],
+    primaryDoctor: 'Dr. Eleanor Chen, MD (Internal Medicine)',
+    primaryClinic: 'St. Jude Senior Health Pavilion, Suite 400',
+    emergencyContactName: 'Sarah Vance (Daughter)',
+    emergencyPhone: '(555) 234-8910',
+    address: '742 Evergreen Terrace, Apt 3B, Oakridge',
+    reminderSettings: { autoScanEnabled: true, missedGraceMinutes: 30, upcomingLeadMinutes: 60, appointmentLeadHours: 48 },
+    careCircle: [
+      { id: 'mem_martha', name: 'Martha Vance', role: 'Elderly Individual', relationship: 'Self (Patient)', email: 'martha.vance@eldercare.demo', phone: '(555) 234-1100', avatarColor: '#0F766E', notifications: { upcomingDoses: true, missedMedications: true, appointments: true, dailySummary: false } },
+      { id: 'mem_sarah', name: 'Sarah Vance', role: 'Family Member', relationship: 'Daughter (Primary Family Coordinator)', email: 'sarah.vance@familycare.demo', phone: '(555) 234-8910', avatarColor: '#2563EB', notifications: { upcomingDoses: false, missedMedications: true, appointments: true, dailySummary: true } },
+      { id: 'mem_david', name: 'Nurse David Miller, RN', role: 'Caretaker', relationship: 'Visiting Home Care Nurse', email: 'david.miller.rn@homehealth.demo', phone: '(555) 876-5432', avatarColor: '#7C3AED', notifications: { upcomingDoses: true, missedMedications: true, appointments: true, dailySummary: true } },
+      { id: 'mem_michael', name: 'Michael Vance', role: 'Family Member', relationship: 'Son', email: 'michael.vance@familycare.demo', phone: '(555) 391-0042', avatarColor: '#D97706', notifications: { upcomingDoses: false, missedMedications: true, appointments: true, dailySummary: false } }
+    ],
+    medications: [
+      { id: 'med_lisinopril', name: 'Lisinopril', dosage: '10 mg', form: 'Tablet', purpose: 'Blood Pressure Control', frequency: 'Once Daily', times: ['07:30'], instructions: 'Take every morning with a full glass of water.', prescribedBy: 'Dr. Eleanor Chen', pillsRemaining: 24, refillThreshold: 7, active: true },
+      { id: 'med_metformin', name: 'Metformin HCl', dosage: '500 mg', form: 'Tablet', purpose: 'Type 2 Diabetes (Blood Glucose)', frequency: 'Twice Daily', times: [overdueTime, '19:30'], instructions: 'Take with meals to reduce stomach upset.', prescribedBy: 'Dr. Eleanor Chen', pillsRemaining: 5, refillThreshold: 10, active: true },
+      { id: 'med_atorvastatin', name: 'Atorvastatin', dosage: '20 mg', form: 'Tablet', purpose: 'Cholesterol Management', frequency: 'Once Daily', times: [upcomingSoonTime], instructions: 'Take consistently. Avoid grapefruit juice.', prescribedBy: 'Dr. Robert Patel (Cardiology)', pillsRemaining: 18, refillThreshold: 7, active: true },
+      { id: 'med_vitd3', name: 'Vitamin D3 + Calcium', dosage: '1000 IU / 600 mg', form: 'Softgel', purpose: 'Bone Density & Joint Support', frequency: 'Once Daily', times: ['13:00'], instructions: 'Take after lunch.', prescribedBy: 'Dr. Eleanor Chen', pillsRemaining: 42, refillThreshold: 10, active: true }
+    ],
+    doseLogs: {
+      [`${today}_med_lisinopril_07:30`]: { date: today, medId: 'med_lisinopril', time: '07:30', status: 'taken', loggedAt: new Date(new Date().setHours(7, 34, 0)).toISOString(), loggedBy: 'Martha Vance (Elderly Individual)', note: 'Taken with morning oatmeal.' }
+    },
+    appointments: [
+      { id: 'apt_cardio', doctorName: 'Dr. Robert Patel, MD', specialty: 'Cardiology', title: 'Quarterly Blood Pressure & Echocardiogram Review', clinic: 'Oakridge Heart & Vascular Institute, Room 214', address: '450 Medical Center Pkwy, Oakridge', date: tomorrow, time: '10:30', accompaniedBy: 'Sarah Vance (Daughter)', prepNotes: 'Bring home blood pressure log and current pill bottles.', status: 'Upcoming', reminderSent: true },
+      { id: 'apt_pcp', doctorName: 'Dr. Eleanor Chen, MD', specialty: 'Internal Medicine & Geriatrics', title: 'HbA1c Diabetes Lab Check & Medication Refill Review', clinic: 'St. Jude Senior Health Pavilion, Suite 400', address: '1200 Wellness Way, Oakridge', date: inThreeDays, time: '14:00', accompaniedBy: 'Nurse David Miller, RN', prepNotes: 'Review continuous glucose log.', status: 'Upcoming', reminderSent: false },
+      { id: 'apt_eye', doctorName: 'Dr. Hannah Lindqvist, OD', specialty: 'Ophthalmology', title: 'Annual Diabetic Retinal Exam', clinic: 'ClearView Senior Eye Care', address: '88 Pinehurst Ave, Suite 102', date: inEightDays, time: '11:15', accompaniedBy: 'Michael Vance (Son)', prepNotes: 'Pupils will be dilated; bring sunglasses.', status: 'Upcoming', reminderSent: false }
+    ],
+    routines: [
+      { id: 'rtn_bp', title: 'Morning Blood Pressure & Pulse Check', category: 'Vitals Monitoring', scheduledTime: '08:00', targetDescription: 'Sit quietly for 5 mins before cuff reading.', assignedTo: 'Martha Vance', completedDates: [today, yesterday, twoDaysAgo, threeDaysAgo, fourDaysAgo, sixDaysAgo] },
+      { id: 'rtn_hydration', title: 'Daily Hydration Goal (6–8 Glasses of Water)', category: 'Nutrition & Hydration', scheduledTime: '12:00', targetDescription: 'Drink water steadily throughout the day.', assignedTo: 'Martha Vance', completedDates: [yesterday, twoDaysAgo, threeDaysAgo, fiveDaysAgo, sixDaysAgo] },
+      { id: 'rtn_walk', title: '20-Minute Gentle Garden Walk & Balance Exercises', category: 'Mobility & Exercise', scheduledTime: '10:30', targetDescription: 'Low-impact walk with supportive footwear.', assignedTo: 'Martha Vance', completedDates: [today, yesterday, threeDaysAgo, fourDaysAgo, fiveDaysAgo] }
+    ],
+    vitals: [
+      { id: 'vit_1', recordedAt: new Date(new Date().setHours(8, 5, 0)).toISOString(), recordedBy: 'Martha Vance (Elderly Individual)', bloodPressure: '124/78', heartRate: 71, bloodGlucose: 108, weightLbs: 146.5, mood: 'Rested & Cheerful', notes: 'Slept 7.5 hours without waking.' },
+      { id: 'vit_2', recordedAt: `${yesterday}T08:15:00.000Z`, recordedBy: 'Nurse David Miller, RN (Caretaker)', bloodPressure: '128/80', heartRate: 74, bloodGlucose: 114, weightLbs: 146.8, mood: 'Good Energy', notes: 'No ankle swelling observed.' }
+    ],
+    activities: [
+      { id: 'act_1', timestamp: new Date(new Date().setHours(8, 5, 0)).toISOString(), actor: 'Martha Vance (Elderly Individual)', type: 'vital_logged', text: 'Logged morning vitals: BP 124/78 mmHg, Heart Rate 71 bpm, Glucose 108 mg/dL.' },
+      { id: 'act_2', timestamp: new Date(new Date().setHours(7, 34, 0)).toISOString(), actor: 'Martha Vance (Elderly Individual)', type: 'dose_taken', text: 'Marked Lisinopril 10 mg (7:30 AM dose) as Taken.' }
+    ],
+    emailLogs: []
+  };
+
+  [yesterday, twoDaysAgo, threeDaysAgo, fourDaysAgo, fiveDaysAgo, sixDaysAgo].forEach((dKey) => {
+    marthaProfile.medications.forEach((med) => {
+      med.times.forEach((t) => {
+        marthaProfile.doseLogs[`${dKey}_${med.id}_${t}`] = {
+          date: dKey, medId: med.id, time: t, status: 'taken', loggedAt: `${dKey}T12:00:00.000Z`, loggedBy: 'Martha Vance (Elderly Individual)', note: ''
+        };
+      });
+    });
   });
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    if (res.status === 401 && data.requiresPasscode) {
-      lockProfile(false);
+  marthaProfile.emailLogs = [
+    {
+      id: 'eml_seed_1',
+      type: 'upcoming_appointment',
+      categoryLabel: 'Medical Appointment Reminder',
+      subject: `[ElderCare Reminder] Upcoming Cardiology Appointment for Martha Vance (${tomorrow} at 10:30 AM)`,
+      headline: 'Upcoming Doctor Appointment Tomorrow',
+      subtitle: 'Automated reminder from the ElderCare shared healthcare platform regarding Martha Vance’s scheduled medical appointment.',
+      detailsRows: [
+        { label: 'Patient', value: 'Martha Vance (MARTHA-842)' },
+        { label: 'Doctor & Specialty', value: 'Dr. Robert Patel, MD · Cardiology' },
+        { label: 'Date & Time', value: `${tomorrow} at 10:30 AM` },
+        { label: 'Clinic Location', value: 'Oakridge Heart & Vascular Institute, Room 214' }
+      ],
+      actionNote: 'Bring home blood pressure log and current pill bottles.',
+      urgency: 'appointment',
+      recipients: marthaProfile.careCircle.map((m) => ({ name: m.name, email: m.email, role: m.role })),
+      html: '',
+      deliveryStatus: 'Dispatched to Care Circle',
+      sentAt: new Date(Date.now() - 3600 * 1000).toISOString()
     }
-    throw new Error(data.error || `Request failed (${res.status})`);
+  ];
+  marthaProfile.emailLogs[0].html = buildLocalEmailHtml({
+    profile: marthaProfile,
+    category: 'Medical Appointment Reminder',
+    headline: marthaProfile.emailLogs[0].headline,
+    subtitle: marthaProfile.emailLogs[0].subtitle,
+    detailsRows: marthaProfile.emailLogs[0].detailsRows,
+    actionNote: marthaProfile.emailLogs[0].actionNote,
+    urgency: 'appointment'
+  });
+
+  const arthurProfile = {
+    profileCode: 'ARTHUR-319',
+    passcode: '1943',
+    elderName: 'Arthur Pendelton',
+    age: 83,
+    bloodType: 'A+',
+    allergies: ['Codeine', 'Latex'],
+    conditions: ['Atrial Fibrillation', 'Post-Hip Arthroplasty Recovery', 'Hypothyroidism'],
+    primaryDoctor: 'Dr. Marcus Sterling, MD (Geriatrics)',
+    primaryClinic: 'Mercy Senior Care Center, Suite 210',
+    emergencyContactName: 'Claire Pendelton (Daughter)',
+    emergencyPhone: '(555) 908-3312',
+    reminderSettings: { autoScanEnabled: true, missedGraceMinutes: 30, upcomingLeadMinutes: 60, appointmentLeadHours: 48 },
+    careCircle: [
+      { id: 'mem_arthur', name: 'Arthur Pendelton', role: 'Elderly Individual', relationship: 'Self (Patient)', email: 'arthur.pendelton@eldercare.demo', phone: '(555) 908-1122', avatarColor: '#0F766E', notifications: { upcomingDoses: true, missedMedications: true, appointments: true, dailySummary: false } },
+      { id: 'mem_claire', name: 'Claire Pendelton', role: 'Family Member', relationship: 'Daughter', email: 'claire.pendelton@familycare.demo', phone: '(555) 908-3312', avatarColor: '#2563EB', notifications: { upcomingDoses: true, missedMedications: true, appointments: true, dailySummary: true } },
+      { id: 'mem_elena', name: 'Elena Rostova, CNA', role: 'Caretaker', relationship: 'Daily Care Specialist', email: 'elena.rostova@careteam.demo', phone: '(555) 443-9821', avatarColor: '#7C3AED', notifications: { upcomingDoses: true, missedMedications: true, appointments: true, dailySummary: true } }
+    ],
+    medications: [
+      { id: 'med_eliquis', name: 'Apixaban (Eliquis)', dosage: '5 mg', form: 'Tablet', purpose: 'Stroke Prevention / AFib Anticoagulant', frequency: 'Twice Daily', times: ['08:00', '20:00'], instructions: 'Critical anticoagulant: do not skip doses.', prescribedBy: 'Dr. Marcus Sterling', pillsRemaining: 32, refillThreshold: 10, active: true },
+      { id: 'med_levothyroxine', name: 'Levothyroxine', dosage: '75 mcg', form: 'Tablet', purpose: 'Thyroid Hormone Replacement', frequency: 'Once Daily', times: ['07:00'], instructions: 'Take on an empty stomach 30-60 minutes before breakfast.', prescribedBy: 'Dr. Marcus Sterling', pillsRemaining: 19, refillThreshold: 7, active: true }
+    ],
+    doseLogs: {
+      [`${today}_med_levothyroxine_07:00`]: { date: today, medId: 'med_levothyroxine', time: '07:00', status: 'taken', loggedAt: new Date(new Date().setHours(7, 4, 0)).toISOString(), loggedBy: 'Arthur Pendelton (Elderly Individual)', note: '' }
+    },
+    appointments: [
+      { id: 'apt_ortho', doctorName: 'Dr. Gregory Halstead, MD', specialty: 'Orthopedic Surgery', title: '6-Week Post-Op Hip Mobility & X-Ray Follow-Up', clinic: 'Brookside Orthopedic Institute', address: '900 Surgical Way, Floor 3', date: inThreeDays, time: '11:00', accompaniedBy: 'Claire Pendelton (Daughter)', prepNotes: 'Bring walker for gait check.', status: 'Upcoming', reminderSent: false }
+    ],
+    routines: [
+      { id: 'rtn_hip_pt', title: 'Seated Ankle Pumps & Hip Abduction Exercises', category: 'Post-Op Rehab', scheduledTime: '10:00', targetDescription: '2 sets of 12 gentle repetitions with Elena.', assignedTo: 'Arthur / Elena Rostova', completedDates: [today, yesterday, twoDaysAgo] }
+    ],
+    vitals: [
+      { id: 'vit_art_1', recordedAt: new Date(new Date().setHours(8, 30, 0)).toISOString(), recordedBy: 'Elena Rostova, CNA', bloodPressure: '118/74', heartRate: 68, bloodGlucose: 98, weightLbs: 168.0, mood: 'Steady', notes: 'Incision site clean and healing well.' }
+    ],
+    activities: [
+      { id: 'act_art_1', timestamp: new Date(new Date().setHours(7, 4, 0)).toISOString(), actor: 'Arthur Pendelton (Elderly Individual)', type: 'dose_taken', text: 'Marked Levothyroxine 75 mcg (7:00 AM) as Taken.' }
+    ],
+    emailLogs: []
+  };
+
+  [yesterday, twoDaysAgo, threeDaysAgo, fourDaysAgo, fiveDaysAgo, sixDaysAgo].forEach((dKey) => {
+    arthurProfile.medications.forEach((med) => {
+      med.times.forEach((t) => {
+        arthurProfile.doseLogs[`${dKey}_${med.id}_${t}`] = {
+          date: dKey, medId: med.id, time: t, status: 'taken', loggedAt: `${dKey}T08:10:00.000Z`, loggedBy: 'Elena Rostova, CNA', note: ''
+        };
+      });
+    });
+  });
+
+  return { profiles: { 'MARTHA-842': marthaProfile, 'ARTHUR-319': arthurProfile } };
+}
+
+function getClientStore() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  const initial = buildInitialClientStore();
+  localStorage.setItem(LOCAL_STORE_KEY, JSON.stringify(initial));
+  return initial;
+}
+
+function saveClientStore(storeObj) {
+  try {
+    localStorage.setItem(LOCAL_STORE_KEY, JSON.stringify(storeObj));
+  } catch (_) {}
+}
+
+function computeClientSchedule(profile, dateKey = getTodayDateString()) {
+  const todayKey = getTodayDateString();
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const graceMinutes = Number(profile.reminderSettings?.missedGraceMinutes ?? 30);
+  const upcomingLeadMinutes = Number(profile.reminderSettings?.upcomingLeadMinutes ?? 60);
+
+  const slots = [];
+  (profile.medications || []).forEach((med) => {
+    if (med.active === false) return;
+    (med.times || []).forEach((timeStr) => {
+      const logKey = `${dateKey}_${med.id}_${timeStr}`;
+      const existingLog = profile.doseLogs?.[logKey] || null;
+      const schedMinutes = timeStrToMins(timeStr);
+      let computedStatus = existingLog?.status || 'pending';
+
+      if (computedStatus === 'pending') {
+        if (dateKey < todayKey) computedStatus = 'missed';
+        else if (dateKey === todayKey) {
+          if (currentMinutes - schedMinutes >= graceMinutes) computedStatus = 'overdue';
+          else if (schedMinutes - currentMinutes <= upcomingLeadMinutes && currentMinutes - schedMinutes < graceMinutes) computedStatus = 'due_soon';
+        }
+      }
+
+      let period = 'Morning';
+      if (schedMinutes >= 720 && schedMinutes < 1020) period = 'Afternoon';
+      else if (schedMinutes >= 1020 && schedMinutes < 1260) period = 'Evening';
+      else if (schedMinutes >= 1260) period = 'Bedtime';
+
+      slots.push({
+        slotKey: logKey,
+        date: dateKey,
+        medId: med.id,
+        medName: med.name,
+        dosage: med.dosage,
+        form: med.form,
+        purpose: med.purpose,
+        instructions: med.instructions,
+        prescribedBy: med.prescribedBy,
+        pillsRemaining: med.pillsRemaining,
+        refillThreshold: med.refillThreshold,
+        time: timeStr,
+        timeFormatted: formatTime12h(timeStr),
+        period,
+        status: computedStatus,
+        loggedAt: existingLog?.loggedAt || null,
+        loggedBy: existingLog?.loggedBy || null,
+        note: existingLog?.note || ''
+      });
+    });
+  });
+
+  slots.sort((a, b) => timeStrToMins(a.time) - timeStrToMins(b.time));
+  const totalDoses = slots.length;
+  const takenDoses = slots.filter((s) => s.status === 'taken').length;
+  const missedOrOverdueDoses = slots.filter((s) => s.status === 'missed' || s.status === 'overdue').length;
+  const adherenceRate = totalDoses > 0 ? Math.round((takenDoses / totalDoses) * 100) : 100;
+
+  return { date: dateKey, slots, summary: { totalDoses, takenDoses, missedOrOverdueDoses, adherenceRate } };
+}
+
+function buildClientDashboardPayload(profile, selectedDate = getTodayDateString()) {
+  const todayKey = getTodayDateString();
+  const schedule = computeClientSchedule(profile, selectedDate);
+  const todaySchedule = selectedDate === todayKey ? schedule : computeClientSchedule(profile, todayKey);
+
+  const days = [];
+  let totalScheduled7d = 0;
+  let totalTaken7d = 0;
+  for (let i = -6; i <= 0; i++) {
+    const dKey = getDaysOffsetDateString(i);
+    const dayObj = new Date();
+    dayObj.setDate(dayObj.getDate() + i);
+    const label = dayObj.toLocaleDateString('en-US', { weekday: 'short' });
+    const sched = computeClientSchedule(profile, dKey);
+    const countable = i === 0 ? sched.slots.filter((s) => s.status === 'taken' || s.status === 'missed' || s.status === 'overdue') : sched.slots;
+    const dayTaken = sched.slots.filter((s) => s.status === 'taken').length;
+    totalScheduled7d += countable.length;
+    totalTaken7d += dayTaken;
+    const pct = countable.length > 0 ? Math.round((dayTaken / countable.length) * 100) : 100;
+    days.push({ date: dKey, label, isToday: i === 0, total: sched.slots.length, taken: dayTaken, adherencePct: Math.min(100, pct) });
+  }
+  const weeklyRate = totalScheduled7d > 0 ? Math.min(100, Math.round((totalTaken7d / totalScheduled7d) * 100)) : 100;
+  const weeklyAdherence = { weeklyRate, totalScheduled7d, totalTaken7d, days };
+
+  const lowRefillMedications = (profile.medications || []).filter(
+    (m) => m.active !== false && Number(m.pillsRemaining) <= Number(m.refillThreshold || 7)
+  );
+
+  const enrichedAppointments = (profile.appointments || [])
+    .slice()
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+    .map((apt) => {
+      const datePart = String(apt.date || todayKey).replace(/-/g, '');
+      const [hStr, mStr] = String(apt.time || '10:00').split(':');
+      const startH = String(Number(hStr || 10)).padStart(2, '0');
+      const startM = String(Number(mStr || 0)).padStart(2, '0');
+      const endH = String(Math.min(23, Number(hStr || 10) + 1)).padStart(2, '0');
+      const gcalParams = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: `[ElderCare] ${profile.elderName}: ${apt.doctorName} (${apt.specialty})`,
+        dates: `${datePart}T${startH}${startM}00/${datePart}T${endH}${startM}00`,
+        details: apt.prepNotes || 'Bring medication list.',
+        location: `${apt.clinic || ''} ${apt.address || ''}`.trim()
+      });
+      return {
+        ...apt,
+        googleCalendarUrl: `https://calendar.google.com/calendar/render?${gcalParams.toString()}`,
+        googleMapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${apt.clinic || ''} ${apt.address || ''}`.trim())}`
+      };
+    });
+
+  const insights = [];
+  if (todaySchedule.summary.missedOrOverdueDoses > 0) {
+    insights.push({ type: 'urgent', title: 'Immediate Adherence Check Needed', text: `${todaySchedule.summary.missedOrOverdueDoses} scheduled dose(s) today require confirmation or Care Circle follow-up.` });
+  } else {
+    insights.push({ type: 'positive', title: 'Strong Daily Medication Adherence', text: `All due doses today are on track (${todaySchedule.summary.adherenceRate}% today, ${weeklyRate}% 7-day score).` });
+  }
+  if (lowRefillMedications.length > 0) {
+    insights.push({ type: 'refill', title: 'Pharmacy Refill Coordination', text: `${lowRefillMedications.map((m) => `${m.name} (${m.pillsRemaining} left)`).join(', ')} should be refilled soon.` });
   }
 
-  // If the server already returned the updated dashboard payload, apply it immediately!
-  if (data && data.dashboard) {
-    state.dashboard = data.dashboard;
-    renderAllSections();
+  return {
+    profile,
+    careCircle: profile.careCircle || [],
+    medications: profile.medications || [],
+    lowRefillMedications,
+    schedule,
+    todaySummary: todaySchedule.summary,
+    weeklyAdherence,
+    aiCareBrief: { provider: 'ElderCare Smart Clinical Engine (Gemini-Ready)', insights },
+    appointments: enrichedAppointments,
+    routines: (profile.routines || []).map((r) => ({ ...r, completedToday: (r.completedDates || []).includes(selectedDate) })),
+    vitals: profile.vitals || [],
+    activities: (profile.activities || []).slice(0, 25),
+    emailLogs: (profile.emailLogs || []).slice(0, 50),
+    mailerStatus: { mode: 'local_outbox' }
+  };
+}
+
+function dispatchClientEmail(profile, payload) {
+  const recipients = (profile.careCircle || []).map((m) => ({ name: m.name, email: m.email, role: m.role }));
+  const html = buildLocalEmailHtml({
+    profile,
+    category: payload.categoryLabel || 'Care Reminder',
+    headline: payload.headline,
+    subtitle: payload.subtitle,
+    detailsRows: payload.detailsRows || [],
+    actionNote: payload.actionNote,
+    urgency: payload.urgency || 'normal'
+  });
+  const rec = {
+    id: genLocalId('eml'),
+    type: payload.type || 'custom_alert',
+    categoryLabel: payload.categoryLabel || 'Care Reminder',
+    subject: payload.subject,
+    headline: payload.headline,
+    subtitle: payload.subtitle,
+    detailsRows: payload.detailsRows || [],
+    actionNote: payload.actionNote,
+    urgency: payload.urgency || 'normal',
+    recipients,
+    html,
+    deliveryStatus: 'Dispatched to Care Circle',
+    sentAt: new Date().toISOString()
+  };
+  profile.emailLogs = [rec, ...(profile.emailLogs || [])];
+  return rec;
+}
+
+function executeLocalApiRequest(path, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const body = options.body ? JSON.parse(options.body) : {};
+  const storeObj = getClientStore();
+  const urlObj = new URL(path, window.location.origin);
+  const pathname = urlObj.pathname;
+
+  if (pathname === '/api/profiles/public' && method === 'GET') {
+    return {
+      profiles: Object.values(storeObj.profiles).map((p) => ({
+        profileCode: p.profileCode,
+        elderName: p.elderName,
+        age: p.age,
+        primaryDoctor: p.primaryDoctor,
+        memberCount: (p.careCircle || []).length,
+        demoPasscodeHint: p.passcode,
+        membersPreview: p.careCircle || []
+      }))
+    };
   }
 
-  return data;
+  if (pathname === '/api/auth/verify' && method === 'POST') {
+    const code = String(body.profileCode || '').toUpperCase().trim();
+    const pin = String(body.passcode || '').trim();
+    const prof = storeObj.profiles[code];
+    if (!prof) throw new Error(`No Care Profile found with code "${code}".`);
+    if (String(prof.passcode).trim() !== pin) throw new Error('Incorrect passcode. Please verify the Care Circle PIN.');
+    return { authenticated: true, profileCode: prof.profileCode, elderName: prof.elderName, careCircle: prof.careCircle, dashboard: buildClientDashboardPayload(prof, body.date) };
+  }
+
+  if (pathname === '/api/profiles' && method === 'POST') {
+    const cleanCode = (body.profileCode || `${body.elderName.split(' ')[0].toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`).toUpperCase().trim();
+    const newProf = {
+      profileCode: cleanCode,
+      passcode: String(body.passcode || '2580').trim(),
+      elderName: body.elderName,
+      age: Number(body.age || 78),
+      bloodType: 'O+',
+      allergies: [],
+      conditions: [],
+      primaryDoctor: body.primaryDoctor || 'Primary Care Physician',
+      emergencyContactName: body.caretakerName || 'Care Circle',
+      emergencyPhone: '',
+      reminderSettings: { autoScanEnabled: true, missedGraceMinutes: 30, upcomingLeadMinutes: 60, appointmentLeadHours: 48 },
+      careCircle: [
+        { id: genLocalId('mem'), name: body.elderName, role: 'Elderly Individual', relationship: 'Self', email: body.elderEmail || 'patient@eldercare.demo', avatarColor: '#0F766E', notifications: { upcomingDoses: true, missedMedications: true, appointments: true } }
+      ],
+      medications: [],
+      doseLogs: {},
+      appointments: [],
+      routines: [],
+      vitals: [],
+      activities: [{ id: genLocalId('act'), timestamp: new Date().toISOString(), actor: body.elderName, type: 'created', text: `Created Care Profile ${cleanCode}.` }],
+      emailLogs: []
+    };
+    storeObj.profiles[cleanCode] = newProf;
+    saveClientStore(storeObj);
+    return { profileCode: cleanCode, elderName: newProf.elderName, careCircle: newProf.careCircle, dashboard: buildClientDashboardPayload(newProf) };
+  }
+
+  const match = pathname.match(/^\/api\/profiles\/([^/]+)(?:\/(.*))?$/);
+  if (!match) throw new Error('Endpoint not found');
+  const code = decodeURIComponent(match[1]).toUpperCase();
+  const sub = match[2] || '';
+  const profile = storeObj.profiles[code];
+  if (!profile) throw new Error(`Profile ${code} not found`);
+
+  const addAct = (actor, text) => {
+    profile.activities = [{ id: genLocalId('act'), timestamp: new Date().toISOString(), actor: actor || state.activeActor, text }, ...(profile.activities || [])];
+  };
+
+  if (sub === 'dashboard' && method === 'GET') {
+    return buildClientDashboardPayload(profile, urlObj.searchParams.get('date') || state.selectedDate);
+  }
+
+  if (sub === '' && method === 'PUT') {
+    if (body.elderName) profile.elderName = body.elderName;
+    if (body.age) profile.age = Number(body.age);
+    if (body.bloodType) profile.bloodType = body.bloodType;
+    if (body.allergies !== undefined) profile.allergies = String(body.allergies).split(',').map((s) => s.trim()).filter(Boolean);
+    if (body.conditions !== undefined) profile.conditions = String(body.conditions).split(',').map((s) => s.trim()).filter(Boolean);
+    if (body.primaryDoctor !== undefined) profile.primaryDoctor = body.primaryDoctor;
+    if (body.emergencyPhone !== undefined) profile.emergencyPhone = body.emergencyPhone;
+    addAct(body.actor, 'Updated health profile details.');
+    saveClientStore(storeObj);
+    return { success: true, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub === 'passcode' && method === 'PUT') {
+    profile.passcode = String(body.newPasscode).trim();
+    addAct(body.actor, 'Updated shared Care Profile passcode.');
+    saveClientStore(storeObj);
+    return { success: true, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub === 'medications' && method === 'POST') {
+    const newMed = {
+      id: genLocalId('med'),
+      name: body.name,
+      dosage: body.dosage,
+      form: body.form || 'Tablet',
+      purpose: body.purpose || 'Daily Regimen',
+      frequency: body.frequency || 'Once Daily',
+      times: Array.isArray(body.times) ? body.times : ['08:00'],
+      prescribedBy: body.prescribedBy || profile.primaryDoctor,
+      pillsRemaining: Number(body.pillsRemaining ?? 30),
+      refillThreshold: 7,
+      instructions: body.instructions || 'Take as directed.',
+      active: true
+    };
+    profile.medications.push(newMed);
+    addAct(body.actor, `Added medication ${newMed.name} (${newMed.dosage}).`);
+    saveClientStore(storeObj);
+    return { medication: newMed, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub.startsWith('medications/') && method === 'PUT') {
+    const medId = sub.split('/')[1];
+    const med = profile.medications.find((m) => m.id === medId);
+    if (med) Object.assign(med, body);
+    addAct(body.actor, `Updated medication ${med?.name || ''}.`);
+    saveClientStore(storeObj);
+    return { medication: med, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub.startsWith('medications/') && method === 'DELETE') {
+    const medId = sub.split('/')[1];
+    profile.medications = profile.medications.filter((m) => m.id !== medId);
+    addAct(body.actor, 'Removed medication from schedule.');
+    saveClientStore(storeObj);
+    return { success: true, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub === 'doses/log' && method === 'POST') {
+    const { date = state.selectedDate, medId, time, status, actor } = body;
+    const med = profile.medications.find((m) => m.id === medId);
+    const key = `${date}_${medId}_${time}`;
+    if (status === 'pending') {
+      delete profile.doseLogs[key];
+    } else {
+      profile.doseLogs[key] = { date, medId, time, status, loggedAt: new Date().toISOString(), loggedBy: actor };
+      if (status === 'taken' && med) med.pillsRemaining = Math.max(0, Number(med.pillsRemaining || 0) - 1);
+    }
+    addAct(actor, `Marked ${med?.name || 'dose'} (${formatTime12h(time)}) as ${status}.`);
+    if (status === 'missed') {
+      dispatchClientEmail(profile, {
+        type: 'missed_medication',
+        categoryLabel: 'Missed Medication Alert',
+        subject: `[URGENT: Missed Dose] ${profile.elderName} missed ${med?.name || 'medication'} at ${formatTime12h(time)}`,
+        headline: `Missed Medication Alert: ${med?.name || 'Medication'}`,
+        subtitle: `${actor} flagged the ${formatTime12h(time)} dose as missed.`,
+        detailsRows: [
+          { label: 'Patient', value: profile.elderName },
+          { label: 'Medication', value: `${med?.name} (${med?.dosage})` },
+          { label: 'Scheduled Time', value: formatTime12h(time) }
+        ],
+        actionNote: 'Please check in with the patient immediately.',
+        urgency: 'high'
+      });
+    }
+    saveClientStore(storeObj);
+    return { success: true, dashboard: buildClientDashboardPayload(profile, date) };
+  }
+
+  if (sub === 'appointments' && method === 'POST') {
+    const newApt = { id: genLocalId('apt'), ...body, status: 'Upcoming', reminderSent: Boolean(body.sendEmailNow) };
+    profile.appointments.push(newApt);
+    let dispatchedEmail = null;
+    if (body.sendEmailNow) {
+      dispatchedEmail = dispatchClientEmail(profile, {
+        type: 'upcoming_appointment',
+        categoryLabel: 'New Appointment Scheduled',
+        subject: `[ElderCare Appointment] ${profile.elderName} with ${newApt.doctorName} on ${newApt.date}`,
+        headline: `New Medical Appointment Scheduled`,
+        subtitle: `Appointment scheduled with ${newApt.doctorName} (${newApt.specialty}).`,
+        detailsRows: [
+          { label: 'Doctor', value: `${newApt.doctorName} · ${newApt.specialty}` },
+          { label: 'Date & Time', value: `${newApt.date} at ${formatTime12h(newApt.time)}` },
+          { label: 'Clinic', value: newApt.clinic || 'Medical Center' }
+        ],
+        actionNote: newApt.prepNotes || 'Please mark your calendar.',
+        urgency: 'appointment'
+      });
+    }
+    addAct(body.actor, `Scheduled appointment with ${newApt.doctorName}.`);
+    saveClientStore(storeObj);
+    return { appointment: newApt, dispatchedEmail, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub.startsWith('appointments/') && method === 'PUT') {
+    const aptId = sub.split('/')[1];
+    const apt = profile.appointments.find((a) => a.id === aptId);
+    if (apt) Object.assign(apt, body);
+    addAct(body.actor, `Updated appointment with ${apt?.doctorName || ''}.`);
+    saveClientStore(storeObj);
+    return { appointment: apt, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub.startsWith('appointments/') && method === 'DELETE') {
+    const aptId = sub.split('/')[1];
+    profile.appointments = profile.appointments.filter((a) => a.id !== aptId);
+    addAct(body.actor, 'Cancelled appointment.');
+    saveClientStore(storeObj);
+    return { success: true, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub === 'routines' && method === 'POST') {
+    const rtn = { id: genLocalId('rtn'), ...body, completedDates: [] };
+    profile.routines.push(rtn);
+    addAct(body.actor, `Added daily routine: ${rtn.title}.`);
+    saveClientStore(storeObj);
+    return { routine: rtn, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub.endsWith('/toggle') && method === 'POST') {
+    const rtnId = sub.split('/')[1];
+    const rtn = profile.routines.find((r) => r.id === rtnId);
+    const dKey = body.date || state.selectedDate;
+    if (rtn) {
+      rtn.completedDates = rtn.completedDates || [];
+      const idx = rtn.completedDates.indexOf(dKey);
+      if (idx === -1) rtn.completedDates.push(dKey);
+      else rtn.completedDates.splice(idx, 1);
+    }
+    saveClientStore(storeObj);
+    return { routine: rtn, dashboard: buildClientDashboardPayload(profile, dKey) };
+  }
+
+  if (sub.startsWith('routines/') && method === 'DELETE') {
+    const rtnId = sub.split('/')[1];
+    profile.routines = profile.routines.filter((r) => r.id !== rtnId);
+    saveClientStore(storeObj);
+    return { success: true, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub === 'vitals' && method === 'POST') {
+    const vit = { id: genLocalId('vit'), recordedAt: new Date().toISOString(), recordedBy: body.actor || profile.elderName, ...body };
+    profile.vitals.unshift(vit);
+    addAct(body.actor, `Logged vitals: BP ${vit.bloodPressure} mmHg, HR ${vit.heartRate} bpm.`);
+    saveClientStore(storeObj);
+    return { vital: vit, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub === 'members' && method === 'POST') {
+    const mem = { id: genLocalId('mem'), avatarColor: '#2563EB', notifications: { upcomingDoses: true, missedMedications: true, appointments: true }, ...body };
+    profile.careCircle.push(mem);
+    addAct(body.actor, `Added ${mem.name} to Care Circle.`);
+    saveClientStore(storeObj);
+    return { member: mem, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub.startsWith('members/') && method === 'PUT') {
+    const memId = sub.split('/')[1];
+    const mem = profile.careCircle.find((m) => m.id === memId);
+    if (mem && body.notifications) mem.notifications = { ...mem.notifications, ...body.notifications };
+    saveClientStore(storeObj);
+    return { member: mem, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if (sub.startsWith('members/') && method === 'DELETE') {
+    const memId = sub.split('/')[1];
+    profile.careCircle = profile.careCircle.filter((m) => m.id !== memId);
+    saveClientStore(storeObj);
+    return { success: true, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  if ((sub === 'reminders/scan' || sub === 'reminders/send') && method === 'POST') {
+    const med = profile.medications.find((m) => m.id === body.medId) || profile.medications[0] || { name: 'Daily Medication', dosage: '10 mg' };
+    const apt = profile.appointments.find((a) => a.id === body.appointmentId) || profile.appointments[0] || { doctorName: 'Primary Physician', specialty: 'General Medicine', date: getTodayDateString(), time: '10:30', clinic: 'Medical Pavilion' };
+    const type = body.type || 'missed_medication';
+
+    const emailRecord = dispatchClientEmail(profile, {
+      type,
+      categoryLabel: type === 'upcoming_appointment' ? 'Medical Appointment Reminder' : type === 'upcoming_dose' ? 'Upcoming Dose Reminder' : type === 'daily_summary' ? 'Daily Care Circle Digest' : 'Missed Medication Alert',
+      subject: type === 'upcoming_appointment'
+        ? `[Appointment Reminder] ${profile.elderName} with ${apt.doctorName} on ${apt.date}`
+        : `[ElderCare Care Alert] ${profile.elderName} — ${med.name} (${med.dosage})`,
+      headline: type === 'upcoming_appointment' ? `Upcoming Appointment: ${apt.doctorName}` : `Care Reminder: ${med.name} (${med.dosage})`,
+      subtitle: `Proactive care notification dispatched to ${profile.elderName}'s Care Circle.`,
+      detailsRows: [
+        { label: 'Patient', value: `${profile.elderName} (${profile.profileCode})` },
+        { label: 'Item', value: type === 'upcoming_appointment' ? `${apt.doctorName} (${apt.specialty})` : `${med.name} · ${med.dosage}` },
+        { label: 'Triggered By', value: body.actor || state.activeActor }
+      ],
+      actionNote: 'Log into ElderCare with your Care Circle passcode to review or update the schedule.',
+      urgency: type === 'missed_medication' ? 'high' : type === 'upcoming_appointment' ? 'appointment' : 'warning'
+    });
+    saveClientStore(storeObj);
+    return { dispatchedCount: 1, dispatched: [emailRecord], emailRecord, dashboard: buildClientDashboardPayload(profile, body.selectedDate) };
+  }
+
+  return { dashboard: buildClientDashboardPayload(profile) };
+}
+
+// ---------------------------------------------------------------------------
+// Fast Single-Round-Trip API Helper (Express Backend + Automatic Netlify Fallback)
+// ---------------------------------------------------------------------------
+async function apiRequest(path, options = {}) {
+  const isLocalhost =
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  if (state.useClientEngine || !isLocalhost) {
+    const localData = executeLocalApiRequest(path, options);
+    if (localData && localData.dashboard) {
+      state.dashboard = localData.dashboard;
+      renderAllSections();
+    }
+    return localData;
+  }
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+    if (state.activePasscode) {
+      headers['x-passcode'] = state.activePasscode;
+    }
+
+    const res = await fetch(path, {
+      ...options,
+      headers
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      state.useClientEngine = true;
+      const localData = executeLocalApiRequest(path, options);
+      if (localData && localData.dashboard) {
+        state.dashboard = localData.dashboard;
+        renderAllSections();
+      }
+      return localData;
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 401 && data.requiresPasscode) {
+        lockProfile(false);
+      }
+      throw new Error(data.error || `Request failed (${res.status})`);
+    }
+
+    if (data && data.dashboard) {
+      state.dashboard = data.dashboard;
+      renderAllSections();
+    }
+
+    return data;
+  } catch (err) {
+    if (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError'))) {
+      state.useClientEngine = true;
+      const localData = executeLocalApiRequest(path, options);
+      if (localData && localData.dashboard) {
+        state.dashboard = localData.dashboard;
+        renderAllSections();
+      }
+      return localData;
+    }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------
